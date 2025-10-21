@@ -82,12 +82,14 @@ class ApiClient {
     String endpoint, {
     Map<String, dynamic>? queryParams,
     Object? data,
+    Options? options,
   }) async {
     try {
       return await _dio.delete(
         endpoint,
         queryParameters: queryParams,
         data: data,
+        options: options,
       );
     } catch (e) {
       rethrow;
