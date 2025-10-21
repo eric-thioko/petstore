@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:petstore/core/router/routes.dart';
+import 'package:petstore/domain/usecase/cart/cart_add.dart';
 import 'package:petstore/domain/usecase/pet/pet_get.dart';
 import 'package:petstore/domain/usecase/pet/pet_delete.dart';
 import 'package:petstore/presentation/home/cubit/home_cubit.dart';
@@ -205,6 +206,33 @@ class _HomeViewState extends State<HomeView> {
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
+                            IconButton(
+                              icon: const Icon(Icons.add_shopping_cart),
+                              onPressed: () async {
+                                final cartAdd = context.read<CartAdd>();
+                                final result = await cartAdd.execute(pet);
+                                if (context.mounted) {
+                                  result.fold(
+                                    (failure) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(
+                                          content: Text(failure.errorMessage),
+                                          backgroundColor: Colors.red,
+                                        ),
+                                      );
+                                    },
+                                    (success) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Added to cart'),
+                                          backgroundColor: Colors.green,
+                                        ),
+                                      );
+                                    },
+                                  );
+                                }
+                              },
+                            ),
                             IconButton(
                               icon: const Icon(Icons.edit),
                               onPressed: () async {

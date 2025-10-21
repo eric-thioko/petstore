@@ -12,6 +12,7 @@ class RootPage extends StatefulWidget {
 class _RootPageState extends State<RootPage> {
   int _selectedIndex = 0;
   final GlobalKey<HomePageState> _homePageKey = GlobalKey<HomePageState>();
+  final GlobalKey<CartPageState> _cartPageKey = GlobalKey<CartPageState>();
 
   late final List<Widget> _pages;
 
@@ -20,7 +21,7 @@ class _RootPageState extends State<RootPage> {
     super.initState();
     _pages = [
       HomePage(key: _homePageKey),
-      const CartPage(),
+      CartPage(key: _cartPageKey),
     ];
   }
 
@@ -28,6 +29,11 @@ class _RootPageState extends State<RootPage> {
     // Refresh home page when switching back to home tab
     if (index == 0 && _selectedIndex != 0) {
       _homePageKey.currentState?.refreshPets();
+    }
+
+    // Refresh cart page when switching to cart tab
+    if (index == 1 && _selectedIndex != 1) {
+      _cartPageKey.currentState?.refreshCart();
     }
 
     setState(() {
