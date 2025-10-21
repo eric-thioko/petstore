@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:petstore/core/di/service_locator.dart';
 import 'package:petstore/domain/usecase/pet/pet_add.dart';
 import 'package:petstore/presentation/add_pet/cubit/add_pet_cubit.dart';
 
@@ -10,7 +11,7 @@ class AddPetPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => AddPetCubit(petAdd: context.read<PetAdd>()),
+      create: (context) => AddPetCubit(petAdd: sl<PetAdd>()),
       child: const AddPetView(),
     );
   }

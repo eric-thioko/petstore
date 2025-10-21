@@ -26,7 +26,8 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
         return Left(Failure(errorMessage: 'Pet already in cart'));
       }
 
-      await box.put(pet.id, pet);
+      // Use string key instead of integer to avoid Hive range limitations
+      await box.put('pet_${pet.id}', pet);
       return Right(unit);
     } catch (e) {
       return Left(Failure(errorMessage: e.toString()));
@@ -48,7 +49,8 @@ class CartLocalDataSourceImpl implements CartLocalDataSource {
   Future<Either<Failure, Unit>> removeFromCart({required int petId}) async {
     try {
       final box = await _cartBox;
-      await box.delete(petId);
+      // Use string key to match the addToCart method
+      await box.delete('pet_$petId');
       return Right(unit);
     } catch (e) {
       return Left(Failure(errorMessage: e.toString()));

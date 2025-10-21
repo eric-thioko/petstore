@@ -4,15 +4,20 @@ import 'package:petstore/core/common/state/generic_state.dart';
 import 'package:petstore/domain/entity/pet/pet_entity.dart';
 import 'package:petstore/domain/usecase/pet/pet_get.dart';
 import 'package:petstore/domain/usecase/pet/pet_delete.dart';
+import 'package:petstore/domain/usecase/cart/cart_add.dart';
 
 part 'home_state.dart';
 
 class HomeCubit extends Cubit<HomeState> {
   final PetGet petGet;
   final PetDelete petDelete;
+  final CartAdd cartAdd;
 
-  HomeCubit({required this.petGet, required this.petDelete})
-      : super(HomeState.initial());
+  HomeCubit({
+    required this.petGet,
+    required this.petDelete,
+    required this.cartAdd,
+  }) : super(HomeState.initial());
 
   Future<void> getPet() async {
     emit(state.copyWith(state: GenericDataState.loading()));
@@ -35,6 +40,17 @@ class HomeCubit extends Cubit<HomeState> {
         emit(state.copyWith(deleteState: GenericDataState.success(data: null)));
         getPet(); // Refresh the list after successful delete
       },
+    );
+  }
+
+  Future<void> addToCart(PetEntity pet) async {
+    emit(state.copyWith(addToCartState: GenericDataState.loading()));
+    final result = await cartAdd.execute(pet);
+    result.fold(
+      (fail) => emit(state.copyWith(
+          addToCartState: GenericDataState.error(failure: fail))),
+      (success) => emit(
+          state.copyWith(addToCartState: GenericDataState.success(data: null))),
     );
   }
 }

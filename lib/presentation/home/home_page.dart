@@ -1,13 +1,17 @@
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:petstore/core/common/widgets/confirmation_dialog.dart';
+import 'package:petstore/core/common/widgets/empty_state.dart';
+import 'package:petstore/core/common/widgets/error_state.dart';
+import 'package:petstore/core/common/widgets/loading_indicator.dart';
+import 'package:petstore/core/di/service_locator.dart';
 import 'package:petstore/core/router/routes.dart';
-import 'package:petstore/domain/usecase/cart/cart_add.dart';
-import 'package:petstore/domain/usecase/pet/pet_get.dart';
 import 'package:petstore/domain/usecase/pet/pet_delete.dart';
+import 'package:petstore/domain/usecase/pet/pet_get.dart';
+import 'package:petstore/domain/usecase/cart/cart_add.dart';
 import 'package:petstore/presentation/home/cubit/home_cubit.dart';
+import 'package:petstore/presentation/home/widgets/pet_card.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -23,8 +27,9 @@ class HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _homeCubit = HomeCubit(
-      petGet: context.read<PetGet>(),
-      petDelete: context.read<PetDelete>(),
+      petGet: sl<PetGet>(),
+      petDelete: sl<PetDelete>(),
+      cartAdd: sl<CartAdd>(),
     )..getPet();
   }
 
@@ -42,38 +47,20 @@ class HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return BlocProvider.value(
       value: _homeCubit,
-      child: const HomeView(),
+      child: const _HomeView(),
     );
   }
 }
 
-class HomeView extends StatefulWidget {
-  const HomeView({super.key});
+class _HomeView extends StatelessWidget {
+  const _HomeView();
 
-  @override
-  State<HomeView> createState() => _HomeViewState();
-}
-
-class _HomeViewState extends State<HomeView> {
   void _showDeleteConfirmation(BuildContext context, pet) {
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Delete Pet'),
-        content: Text('Are you sure you want to delete ${pet.name}?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              context.read<HomeCubit>().deletePet(pet);
-              Navigator.of(dialogContext).pop();
-            },
-            child: const Text('Delete'),
-          ),
-        ],
+    ConfirmationDialog.show(
+      context,
+      ConfirmationDialog.delete(
+        itemName: pet.name,
+        onConfirm: () => context.read<HomeCubit>().deletePet(pet),
       ),
     );
   }
@@ -81,199 +68,126 @@ class _HomeViewState extends State<HomeView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Pet Store'),
-        actions: [
-          if (kIsWeb)
-            IconButton(
-              onPressed: () {
-                context.read<HomeCubit>().getPet();
-              },
-              icon: Icon(Icons.refresh),
-            ),
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<HomeCubit, HomeState>(
+            listenWhen: (previous, current) =>
+                previous.deleteState != current.deleteState,
+            listener: _handleDeleteStateChange,
+          ),
+          BlocListener<HomeCubit, HomeState>(
+            listenWhen: (previous, current) =>
+                previous.addToCartState != current.addToCartState,
+            listener: _handleAddToCartStateChange,
+          ),
         ],
-      ),
-      body: BlocListener<HomeCubit, HomeState>(
-        listenWhen: (previous, current) =>
-            previous.deleteState != current.deleteState,
-        listener: (context, state) {
-          if (state.deleteState.status.isSuccess) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Pet deleted successfully'),
-                backgroundColor: Colors.green,
-              ),
-            );
-          } else if (state.deleteState.status.isError) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  state.deleteState.failure?.errorMessage ??
-                      'Failed to delete pet',
-                ),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
-        },
         child: BlocBuilder<HomeCubit, HomeState>(
-          builder: (context, state) {
-            final dataState = state.state;
-            if (dataState.status.isLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (dataState.status.isError) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error_outline,
-                      size: 60,
-                      color: Colors.red,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      dataState.failure?.errorMessage ?? 'An error occurred',
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => context.read<HomeCubit>().getPet(),
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              );
-            }
-
-            if (dataState.status.isSuccess) {
-              final pets = dataState.data ?? [];
-              if (pets.isEmpty) {
-                return const Center(child: Text('No pets available'));
-              }
-              return RefreshIndicator(
-                onRefresh: () async {
-                  context.read<HomeCubit>().getPet();
-                },
-                child: ListView.builder(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: pets.length,
-                  itemBuilder: (context, index) {
-                    final pet = pets[index];
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: ListTile(
-                        leading: pet.photoUrls.isNotEmpty
-                            ? ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: CachedNetworkImage(
-                                  imageUrl: pet.photoUrls.first,
-                                  width: 40,
-                                  height: 40,
-                                  fit: BoxFit.cover,
-                                  errorWidget: (_, __, ___) =>
-                                      const Icon(Icons.pets, size: 40),
-                                ),
-                              )
-                            : const Icon(Icons.pets, size: 40),
-                        title: Text(
-                          pet.name,
-                          style: const TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        subtitle: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('Category: ${pet.category.name}'),
-                            Text('Status: ${pet.status}'),
-                            if (pet.tags.isNotEmpty)
-                              Wrap(
-                                spacing: 4,
-                                children: pet.tags
-                                    .map(
-                                      (tag) => Chip(
-                                        label: Text(
-                                          tag.name,
-                                          style: const TextStyle(fontSize: 10),
-                                        ),
-                                        padding: EdgeInsets.zero,
-                                        visualDensity: VisualDensity.compact,
-                                      ),
-                                    )
-                                    .toList(),
-                              ),
-                          ],
-                        ),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.add_shopping_cart),
-                              onPressed: () async {
-                                final cartAdd = context.read<CartAdd>();
-                                final result = await cartAdd.execute(pet);
-                                if (context.mounted) {
-                                  result.fold(
-                                    (failure) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(failure.errorMessage),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    },
-                                    (success) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Added to cart'),
-                                          backgroundColor: Colors.green,
-                                        ),
-                                      );
-                                    },
-                                  );
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.edit),
-                              onPressed: () async {
-                                await context.push(
-                                  Routes.updatePet,
-                                  extra: pet,
-                                );
-                                if (context.mounted) {
-                                  context.read<HomeCubit>().getPet();
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete),
-                              onPressed: () {
-                                _showDeleteConfirmation(context, pet);
-                              },
-                            ),
-                          ],
-                        ),
-                        isThreeLine: true,
-                      ),
-                    );
-                  },
-                ),
-              );
-            }
-
-            return const Center(child: Text('No data'));
-          },
+          builder: (context, state) => _buildBody(context, state),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          await context.push(Routes.addPet);
-          if (context.mounted) {
-            context.read<HomeCubit>().getPet();
-          }
-        },
+        onPressed: () => _navigateToAddPet(context),
         child: const Icon(Icons.add),
       ),
     );
+  }
+
+  void _handleDeleteStateChange(BuildContext context, HomeState state) {
+    if (state.deleteState.status.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Pet deleted successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else if (state.deleteState.status.isError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            state.deleteState.failure?.errorMessage ?? 'Failed to delete pet',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _handleAddToCartStateChange(BuildContext context, HomeState state) {
+    if (state.addToCartState.status.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Added to cart'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else if (state.addToCartState.status.isError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            state.addToCartState.failure?.errorMessage ?? 'Failed to add to cart',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _buildBody(BuildContext context, HomeState state) {
+    final dataState = state.state;
+
+    if (dataState.status.isLoading) {
+      return const LoadingIndicator();
+    }
+
+    if (dataState.status.isError) {
+      return ErrorState(
+        message: dataState.failure?.errorMessage ?? 'An error occurred',
+        onRetry: () => context.read<HomeCubit>().getPet(),
+      );
+    }
+
+    if (dataState.status.isSuccess) {
+      final pets = dataState.data ?? [];
+
+      if (pets.isEmpty) {
+        return const EmptyState(
+          icon: Icons.pets,
+          message: 'No pets available',
+        );
+      }
+
+      return _buildPetList(context, pets);
+    }
+
+    return const EmptyState(
+      icon: Icons.info_outline,
+      message: 'No data',
+    );
+  }
+
+  Widget _buildPetList(BuildContext context, List pets) {
+    return RefreshIndicator(
+      onRefresh: () async {
+        context.read<HomeCubit>().getPet();
+      },
+      child: ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: pets.length,
+        itemBuilder: (context, index) {
+          final pet = pets[index];
+          return PetCard(
+            pet: pet,
+            onDeletePressed: () => _showDeleteConfirmation(context, pet),
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _navigateToAddPet(BuildContext context) async {
+    await context.push(Routes.addPet);
+    if (context.mounted) {
+      context.read<HomeCubit>().getPet();
+    }
   }
 }
