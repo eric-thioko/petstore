@@ -8,18 +8,40 @@ import 'package:petstore/domain/usecase/pet/pet_get.dart';
 import 'package:petstore/domain/usecase/pet/pet_delete.dart';
 import 'package:petstore/presentation/home/cubit/home_cubit.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
   @override
+  State<HomePage> createState() => HomePageState();
+}
+
+class HomePageState extends State<HomePage> {
+  late final HomeCubit _homeCubit;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeCubit = HomeCubit(
+      petGet: context.read<PetGet>(),
+      petDelete: context.read<PetDelete>(),
+    )..getPet();
+  }
+
+  @override
+  void dispose() {
+    _homeCubit.close();
+    super.dispose();
+  }
+
+  void refreshPets() {
+    _homeCubit.getPet();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      lazy: false,
-      create: (context) => HomeCubit(
-        petGet: context.read<PetGet>(),
-        petDelete: context.read<PetDelete>(),
-      )..getPet(),
-      child: HomeView(),
+    return BlocProvider.value(
+      value: _homeCubit,
+      child: const HomeView(),
     );
   }
 }
@@ -59,7 +81,7 @@ class _HomeViewState extends State<HomeView> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Pet Store'),
+        title: Text('Pet Store'),
         actions: [
           if (kIsWeb)
             IconButton(
@@ -70,14 +92,6 @@ class _HomeViewState extends State<HomeView> {
             ),
         ],
       ),
-      // floatingActionButton: FloatingActionButton(
-
-      //   onPressed: () async {
-      //     await context.push(Routes.addPet);
-      //     if (context.mounted) context.read<HomeCubit>().getPet();
-      //   },
-      //   child: const Icon(Icons.add),
-      // ),
       body: BlocListener<HomeCubit, HomeState>(
         listenWhen: (previous, current) =>
             previous.deleteState != current.deleteState,
@@ -222,6 +236,15 @@ class _HomeViewState extends State<HomeView> {
             return const Center(child: Text('No data'));
           },
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          await context.push(Routes.addPet);
+          if (context.mounted) {
+            context.read<HomeCubit>().getPet();
+          }
+        },
+        child: const Icon(Icons.add),
       ),
     );
   }

@@ -6,7 +6,7 @@ import 'package:petstore/core/router/routes.dart';
 import 'package:petstore/core/router/transition/route_transition.dart';
 import 'package:petstore/domain/entity/pet/pet_entity.dart';
 import 'package:petstore/presentation/add_pet/add_pet_page.dart';
-import 'package:petstore/presentation/home/home_page.dart';
+import 'package:petstore/presentation/root/root_page.dart';
 import 'package:petstore/presentation/update_pet/update_pet_page.dart';
 
 final GlobalKey<NavigatorState> globalNavigatorKey =
@@ -37,7 +37,7 @@ GoRouter createRouter() {
       GoRoute(
         path: Routes.home,
         pageBuilder: (context, state) {
-          return RouteTransition.slideIn(child: HomePage(), key: state.pageKey);
+          return RouteTransition.slideIn(child: RootPage(), key: state.pageKey);
         },
       ),
       GoRoute(
