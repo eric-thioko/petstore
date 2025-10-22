@@ -1,51 +1,19 @@
 {
   "version": 2,
-  "name": "petstore-flutter-web",
-  "buildCommand": "flutter build web --release",
-  "outputDirectory": "build/web",
-  "installCommand": "flutter pub get",
-  "framework": null,
-  "rewrites": [
+  "builds": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "build/web/**",
+      "use": "@vercel/static"
     }
   ],
-  "headers": [
+  "routes": [
     {
-      "source": "/assets/(.*)",
-      "headers": [
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+      "src": "/(.*)",
+      "dest": "/build/web/$1"
     },
     {
-      "source": "/(.*).js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
-    },
-    {
-      "source": "/(.*).wasm",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/wasm"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=31536000, immutable"
-        }
-      ]
+      "src": "/.*",
+      "dest": "/build/web/index.html"
     }
   ]
 }
