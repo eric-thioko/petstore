@@ -49,5 +49,21 @@ class PetEntity extends Equatable {
     return [id, name, category, photoUrls, tags, status];
   }
 
-
+  PetEntity copyWith({
+    int? id,
+    String? name,
+    CategoryEntity? category,
+    List<String>? photoUrls,
+    List<TagsEntity>? tags,
+    String? status,
+  }) {
+    return PetEntity(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      category: category ?? this.category,
+      photoUrls: photoUrls ?? this.photoUrls,
+      tags: tags ?? this.tags,
+      status: status ?? this.status,
+    );
+  }
 }

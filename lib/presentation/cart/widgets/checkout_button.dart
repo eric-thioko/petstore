@@ -12,6 +12,8 @@ class CheckoutButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final itemText = itemCount == 1 ? 'item' : 'items';
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -29,7 +31,7 @@ class CheckoutButton extends StatelessWidget {
           width: double.infinity,
           child: ElevatedButton(
             onPressed: onPressed,
-            child: Text('Checkout ($itemCount items)'),
+            child: Text('Checkout ($itemCount $itemText)'),
           ),
         ),
       ),
