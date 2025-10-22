@@ -2,6 +2,13 @@
 
 A comprehensive Flutter application for managing a pet store, built with Clean Architecture principles and modern Flutter development practices.
 
+## Demo
+### Web
+[recording.webm](https://github.com/user-attachments/assets/56738988-c51f-46b3-829b-6a6f5031a420)
+### Mobile
+https://github.com/user-attachments/assets/4baf0a03-b646-46df-b15d-2f88df41fa7e
+
+
 ## 📱 Features
 
 ### Core Functionality
